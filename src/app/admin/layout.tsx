@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, 
   Package, 
@@ -21,15 +22,21 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const pathname = usePathname();
 
   const navItems = [
-    { label: "Tổng quan", icon: LayoutDashboard, href: "/admin", active: true },
+    { label: "Tổng quan", icon: LayoutDashboard, href: "/admin" },
     { label: "Đơn hàng", icon: ShoppingCart, href: "/admin/orders" },
     { label: "Sản phẩm", icon: Package, href: "/admin/products" },
     { label: "Kho hàng", icon: Package, href: "/admin/inventory" },
     { label: "Khách hàng", icon: Users, href: "/admin/users" },
     { label: "Cài đặt", icon: Settings, href: "/admin/settings" },
   ];
+
+  const checkActive = (href: string) => {
+    if (href === "/admin") return pathname === "/admin";
+    return pathname?.startsWith(href);
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -44,18 +51,21 @@ export default function AdminLayout({
           </div>
 
           <nav className="flex-1 px-4 space-y-1">
-            {navItems.map((item) => (
-              <Link key={item.label} href={item.href}>
-                <Button 
-                  variant={item.active ? "secondary" : "ghost"} 
-                  className={`w-full justify-start gap-3 h-11 ${item.active ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'text-muted-foreground'}`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                  {item.active && <ChevronRight className="ml-auto w-4 h-4" />}
-                </Button>
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const isActive = checkActive(item.href);
+              return (
+                <Link key={item.label} href={item.href}>
+                  <Button 
+                    variant={isActive ? "secondary" : "ghost"} 
+                    className={`w-full justify-start gap-3 h-11 ${isActive ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'text-muted-foreground'}`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                    {isActive && <ChevronRight className="ml-auto w-4 h-4" />}
+                  </Button>
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="p-4 border-t">
