@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 MMO Account Selling Platform - Hướng dẫn sử dụng
 
-## Getting Started
+Chào mừng bạn đến với hệ thống bán tài khoản MMO tự động Enterprise. Dưới đây là hướng dẫn chi tiết để bạn cài đặt và vận hành website.
 
-First, run the development server:
+## 🛠️ Yêu cầu hệ thống
+- **Node.js**: 18.x trở lên
+- **Supabase Account**: Để quản lý Database và Auth.
+- **VietQR/Bank Account**: Để nhận thanh toán.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 📦 Cài đặt nhanh
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Clone & Cài đặt thư viện**:
+   ```bash
+   npm install
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. **Cấu hình biến môi trường**:
+   - Tạo file `.env.local` từ file mẫu:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. **Khởi tạo Database**:
+   - Truy cập vào [Supabase SQL Editor](https://supabase.com/dashboard/project/_/sql).
+   - Copy nội dung từ file `supabase/schema.sql` và chạy (Run).
 
-## Learn More
+4. **Chạy ứng dụng**:
+   ```bash
+   npm run dev
+   ```
+   Website sẽ chạy tại: `http://localhost:3000`
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📘 Hướng dẫn vận hành (Admin)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Quản lý Sản phẩm
+- Truy cập `/admin/products`.
+- **Thêm sản phẩm**: Nhập tên, giá, và danh mục (Gmail, Facebook, ...).
+- **Import kho hàng**: Sử dụng nút "Import kho hàng" để dán danh sách tài khoản định dạng `user|pass|2fa`. Hệ thống sẽ tự động mã hóa và lưu trữ.
 
-## Deploy on Vercel
+### 2. Duyệt đơn hàng
+- Khi khách hàng đặt hàng, đơn hàng sẽ ở trạng thái **Chờ thanh toán**.
+- Khách hàng tải ảnh bill lên -> Trạng thái thành **Chờ duyệt**.
+- Admin vào `/admin/orders`, xem bill và nhấn **Duyệt**.
+- Hệ thống sẽ tự động lấy tài khoản từ kho và gửi cho khách hàng.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Cấu hình ngân hàng
+- Vào `/admin/settings` -> Tab **Thanh toán**.
+- Cập nhật số tài khoản, tên ngân hàng và chủ tài khoản. Mã QR VietQR sẽ tự động cập nhật theo thông tin này.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🛒 Quy trình mua hàng (Khách)
+1. Chọn sản phẩm -> **Mua ngay**.
+2. Kiểm tra giỏ hàng -> **Thanh toán**.
+3. Chuyển khoản theo mã QR và mã đơn hàng hiển thị trên màn hình.
+4. Tải ảnh bill lên và chờ quản trị viên phê duyệt.
+5. Sau khi hoàn tất, vào **Lịch sử đơn hàng** để tải danh sách tài khoản đã mua.
+
+---
+
+## 🔒 Bảo mật & RLS
+Hệ thống sử dụng **Row Level Security (RLS)** của Supabase:
+- Khách hàng: Chỉ xem được sản phẩm và đơn hàng của chính mình.
+- Admin: Có toàn quyền quản lý kho hàng và duyệt đơn.
+- Tài khoản trong kho (Inventory) được bảo vệ nghiêm ngặt, chỉ xuất đầu ra sau khi đơn hàng được `COMPLETED`.
+
+---
+*Chúc bạn kinh doanh thuận lợi! Nếu có thắc mắc, vui lòng kiểm tra file `walkthrough.md` hoặc liên hệ kỹ thuật.*
