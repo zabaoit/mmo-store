@@ -138,6 +138,7 @@ CREATE POLICY "Admins can manage categories/products" ON public.products FOR ALL
 
 -- Inventory Policies
 CREATE POLICY "Admins can manage inventory" ON public.inventory FOR ALL USING (public.is_staff());
+CREATE POLICY "Everyone can view available inventory stock" ON public.inventory FOR SELECT USING (status = 'AVAILABLE');
 
 -- Orders Policies
 CREATE POLICY "Users can view own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id);

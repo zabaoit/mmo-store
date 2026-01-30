@@ -88,7 +88,7 @@ export default function Header() {
               M
             </div>
             <span className="font-outfit font-bold text-xl tracking-tight hidden sm:block">
-              MMO<span className="text-primary text-2xl">.</span>STORE
+              MMO STORE
             </span>
           </Link>
 
@@ -152,8 +152,7 @@ export default function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl shadow-xl border-border/50">
-                  <DropdownMenuLabel className="font-outfit font-bold">Tài khoản của tôi</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                  
                   <Link href="/orders">
                     <DropdownMenuItem className="gap-2 cursor-pointer py-2.5">
                       <History className="w-4 h-4 text-muted-foreground" />

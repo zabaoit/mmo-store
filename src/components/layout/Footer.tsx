@@ -11,7 +11,7 @@ export default function Footer() {
                 M
               </div>
               <span className="font-outfit font-bold text-lg tracking-tight">
-                MMO.STORE
+                MMO STORE
               </span>
             </Link>
             <p className="text-muted-foreground max-w-sm mb-4">
@@ -41,7 +41,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} MMO.STORE. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} MMO STORE. All rights reserved.</p>
         </div>
       </div>
     </footer>

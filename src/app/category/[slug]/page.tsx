@@ -17,6 +17,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [category, setCategory] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const supabase = createClient();
 
   useEffect(() => {
@@ -35,10 +36,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         // 2. Get products in this category
         const { data: prodData, error: prodError } = await supabase
           .from("products")
-          .select(`
-            *,
-            categories(name)
-          `)
+          .select("*")
           .eq("category_id", catData.id)
           .eq("is_active", true);
 
@@ -46,25 +44,33 @@ export default function CategoryPage({ params }: CategoryPageProps) {
 
         // Fetch AVAILABLE stock for each product in the category
         const formattedProducts = await Promise.all((prodData || []).map(async (p) => {
-          const { count: availableStock } = await supabase
+          const { count: availableStock, error: stockError } = await supabase
             .from("inventory")
             .select("*", { count: 'exact', head: true })
             .eq("product_id", p.id)
             .eq("status", "AVAILABLE");
+
+          if (stockError) console.warn(`Error fetching stock for product ${p.id}:`, stockError);
 
           return {
             id: p.id.toString(),
             name: p.name,
             price: parseFloat(p.price),
             stock: availableStock || 0,
-            category: p.categories?.name || "",
+            category: catData.name, // Use name from category fetch
             slug: p.slug
           };
         }));
 
         setProducts(formattedProducts);
-      } catch (error) {
-        console.error("Error fetching category data:", error);
+      } catch (error: any) {
+        console.error("Error fetching category data:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          fullError: error
+        });
       } finally {
         setLoading(false);
       }
@@ -99,7 +105,12 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         <div className="flex items-center gap-3">
           <div className="relative max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Tìm trong danh mục..." className="pl-10 h-11 bg-secondary/30" />
+            <Input 
+              placeholder="Tìm trong danh mục..." 
+              className="pl-10 h-11 bg-secondary/30" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
             <Filter className="w-4 h-4" />
@@ -109,9 +120,11 @@ export default function CategoryPage({ params }: CategoryPageProps) {
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product.id} {...product} />
-        ))}
+        {products
+          .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+          .map((product) => (
+            <ProductCard key={product.id} {...product} />
+          ))}
       </div>
 
       {/* Empty State */}
