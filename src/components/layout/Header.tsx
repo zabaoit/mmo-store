@@ -82,21 +82,39 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full glass border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-xl shadow-lg shadow-primary/20">
-            M
-          </div>
-          <span className="font-outfit font-bold text-xl tracking-tight hidden sm:block">
-            MMO<span className="text-primary text-2xl">.</span>STORE
-          </span>
-        </Link>
+        <div className="flex items-center gap-8">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-xl shadow-lg shadow-primary/20">
+              M
+            </div>
+            <span className="font-outfit font-bold text-xl tracking-tight hidden sm:block">
+              MMO<span className="text-primary text-2xl">.</span>STORE
+            </span>
+          </Link>
+
+          {/* Nav Links */}
+          <nav className="hidden lg:flex items-center gap-6">
+            <Link href="/products" className="text-sm font-bold text-foreground/70 hover:text-primary transition-colors">
+              Sản phẩm
+            </Link>
+            <Link href="/#categories" className="text-sm font-bold text-foreground/70 hover:text-primary transition-colors">
+              Danh mục
+            </Link>
+          </nav>
+        </div>
 
         {/* Search - Desktop */}
-        <div className="hidden md:flex flex-1 max-w-md relative">
+        <div className="hidden md:flex flex-1 max-w-sm relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Tìm kiếm tài khoản..." 
-            className="pl-10 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary/50"
+            className="pl-10 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary/50 rounded-xl h-10"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const term = (e.target as HTMLInputElement).value;
+                router.push(`/products?search=${encodeURIComponent(term)}`);
+              }
+            }}
           />
         </div>
 
