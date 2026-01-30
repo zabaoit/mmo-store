@@ -201,7 +201,7 @@ export default function CheckoutPage() {
             <div className="bg-white p-6 rounded-3xl flex flex-col items-center shadow-2xl">
               <div className="w-full aspect-square bg-slate-100 rounded-2xl flex items-center justify-center mb-4 relative overflow-hidden">
                  <img 
-                   src={`https://img.vietqr.io/image/970422-000000000-compact.png?amount=${totalPrice}&addInfo=${orderCode}&accountName=MMO%20STORE`} 
+                   src={`https://img.vietqr.io/image/970436-9383198407-compact.png?amount=${totalPrice}&addInfo=${orderCode}&accountName=LE%20QUY%20BAO`} 
                    alt="VietQR"
                    className="w-full h-full object-contain"
                  />
