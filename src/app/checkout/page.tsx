@@ -117,7 +117,7 @@ export default function CheckoutPage() {
           total_amount: totalPrice,
           order_code: newOrderCode,
           status: "PENDING_PAYMENT",
-          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 mins
+          expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 mins
         })
         .select()
         .single();

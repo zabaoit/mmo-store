@@ -69,8 +69,27 @@ export default function AdminOrdersPage() {
     setLoading(false);
   };
 
+  const cleanupExpiredOrders = async () => {
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("status", "PENDING_PAYMENT")
+        .lt("expires_at", now);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error cleaning up expired orders:", error);
+    }
+  };
+
   useEffect(() => {
-    fetchOrders();
+    const init = async () => {
+      await cleanupExpiredOrders();
+      await fetchOrders();
+    };
+    init();
   }, []);
 
   const handleApprove = async (id: string) => {
