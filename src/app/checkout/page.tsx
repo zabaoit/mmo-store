@@ -8,10 +8,11 @@ import {
   CheckCircle2, 
   AlertCircle,
   Copy,
-  ChevronLeft
+  ChevronLeft,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase";
@@ -26,6 +27,8 @@ export default function CheckoutPage() {
   const [user, setUser] = useState<any>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderCode, setOrderCode] = useState("");
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -40,9 +43,46 @@ export default function CheckoutPage() {
       setUser(user);
     };
     fetchUser();
-    // Generate order code once
     setOrderCode("MMO-" + Math.random().toString(36).substring(2, 8).toUpperCase());
   }, []);
+
+  // Timer logic for Step 2
+  useEffect(() => {
+    if (step === 2 && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && step === 2) {
+      handleCancelOrder();
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [step, timeLeft]);
+
+  const handleCancelOrder = async () => {
+    if (!orderId) return;
+    try {
+      await supabase
+        .from("orders")
+        .update({ status: "CANCELLED", admin_note: "Tự động hủy do hết thời gian thanh toán" })
+        .eq("id", orderId);
+      
+      toast.error("Đơn hàng đã bị hủy do hết thời gian thanh toán (5 phút).");
+      setStep(1);
+      setOrderId(null);
+      setTimeLeft(300);
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const totalPrice = getTotalPrice();
 
@@ -196,12 +236,19 @@ export default function CheckoutPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5">
           <h1 className="text-4xl font-bold font-outfit text-center">Thanh toán chuyển khoản</h1>
           
+          <div className="flex justify-center">
+            <div className={`flex items-center gap-2 px-6 py-2 rounded-full border ${timeLeft < 60 ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-primary/10 border-primary/20 text-primary'}`}>
+              <Clock className={`w-5 h-5 ${timeLeft < 60 ? 'animate-pulse' : ''}`} />
+              <span className="font-bold text-xl font-mono">Thời gian còn lại: {formatTime(timeLeft)}</span>
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             {/* QR Code Column */}
             <div className="bg-white p-6 rounded-3xl flex flex-col items-center shadow-2xl">
               <div className="w-full aspect-square bg-slate-100 rounded-2xl flex items-center justify-center mb-4 relative overflow-hidden">
                  <img 
-                   src={`https://img.vietqr.io/image/970436-9383198407-compact.png?amount=${totalPrice}&addInfo=${orderCode}&accountName=LE%20QUY%20BAO`} 
+                   src={`https://img.vietqr.io/image/970422-1730052005-compact.png?amount=${totalPrice}&addInfo=${orderCode}&accountName=LE%20QUY%20BAO`} 
                    alt="VietQR"
                    className="w-full h-full object-contain"
                  />
@@ -219,8 +266,17 @@ export default function CheckoutPage() {
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Số tài khoản</label>
                   <div className="flex items-center justify-between">
-                    <p className="font-bold text-lg">173005200</p>
-                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard('173005200')}>
+                    <p className="font-bold text-lg">1730052005</p>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard('1730052005')}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Số tiền</label>
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-lg text-primary">{totalPrice.toLocaleString('vi-VN')} VNĐ</p>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(totalPrice.toString())}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
@@ -236,12 +292,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-500 leading-relaxed">
-                  Vui lòng chuyển <b>chính xác số tiền</b> và <b>nội dung chuyển khoản</b> để hệ thống tự động duyệt đơn trong 1-3 phút.
-                </p>
-              </div>
+              
 
               <div className="space-y-3">
                 <Button 

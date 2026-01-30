@@ -4,7 +4,7 @@ export async function verifyPaymentAction(orderCode: string, expectedAmount: num
   try {
     // API keys are safe on the server
     const API_KEY = process.env.NEXT_PUBLIC_SEPAY_API_KEY;
-    const ACCOUNT_NUMBER = "173005200"; 
+    const ACCOUNT_NUMBER = "1730052005"; 
 
     if (!API_KEY) {
       return { 
