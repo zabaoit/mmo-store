@@ -97,7 +97,7 @@ export default function Header() {
             <Link href="/products" className="text-sm font-bold text-foreground/70 hover:text-primary transition-colors">
               Sản phẩm
             </Link>
-            <Link href="/#categories" className="text-sm font-bold text-foreground/70 hover:text-primary transition-colors">
+            <Link href="/categories" className="text-sm font-bold text-foreground/70 hover:text-primary transition-colors">
               Danh mục
             </Link>
           </nav>
