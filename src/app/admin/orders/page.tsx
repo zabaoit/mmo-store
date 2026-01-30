@@ -52,6 +52,8 @@ export default function AdminOrdersPage() {
   const [orderDetails, setOrderDetails] = useState<any[]>([]);
   const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const supabase = createClient();
 
   const fetchOrders = async () => {
@@ -184,6 +186,13 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const filteredOrders = orders.filter(o => {
+    const matchesSearch = o.order_code.toLowerCase().includes(search.toLowerCase()) || 
+                         (o.profiles?.email || "").toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "ALL" || o.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
       <div>
@@ -195,11 +204,28 @@ export default function AdminOrdersPage() {
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Tìm mã đơn, email..." className="pl-10 bg-secondary/30 border-none" />
+            <Input 
+              placeholder="Tìm mã đơn, email..." 
+              className="pl-10 bg-secondary/30 border-none" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="h-10 px-4 cursor-pointer hover:bg-secondary">Tất cả</Badge>
-            <Badge variant="outline" className="h-10 px-4 cursor-pointer hover:bg-secondary border-blue-500/50 text-blue-500 bg-blue-500/5">Chờ duyệt</Badge>
+            <Badge 
+              variant={statusFilter === "ALL" ? "default" : "outline"} 
+              className={`h-10 px-4 cursor-pointer hover:bg-secondary ${statusFilter === "ALL" ? "bg-primary text-primary-foreground" : ""}`}
+              onClick={() => setStatusFilter("ALL")}
+            >
+              Tất cả
+            </Badge>
+            <Badge 
+              variant={statusFilter === "WAITING_APPROVAL" ? "default" : "outline"} 
+              className={`h-10 px-4 cursor-pointer hover:bg-secondary ${statusFilter === "WAITING_APPROVAL" ? "bg-blue-500 text-white border-blue-500" : "border-blue-500/50 text-blue-500 bg-blue-500/5"}`}
+              onClick={() => setStatusFilter("WAITING_APPROVAL")}
+            >
+              Chờ duyệt
+            </Badge>
           </div>
         </div>
 
@@ -217,7 +243,7 @@ export default function AdminOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((o) => (
+              {filteredOrders.map((o) => (
                 <TableRow key={o.id} className="hover:bg-secondary/10">
                   <TableCell className="font-mono font-bold text-primary">{o.order_code}</TableCell>
                   <TableCell className="text-sm">{(o as any).profiles?.email}</TableCell>
@@ -300,9 +326,9 @@ export default function AdminOrdersPage() {
               ))}
             </TableBody>
           </Table>
-          {orders.length === 0 && !loading && (
+          {filteredOrders.length === 0 && !loading && (
             <div className="text-center py-20 text-muted-foreground">
-              Không tìm thấy đơn hàng nào.
+              Không tìm thấy đơn hàng nào khớp với tìm kiếm.
             </div>
           )}
         </div>
