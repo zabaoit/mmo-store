@@ -1,11 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import ProductCard from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, ArrowLeft } from "lucide-react";
+import { Search, Filter, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -13,14 +14,66 @@ interface CategoryPageProps {
 
 export default function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = use(params);
-  
-  // Mock data for products
-  const products = [
-    { id: "1", name: `${slug.toUpperCase()} Legacy Account`, price: 15000, stock: 150, category: slug, slug: "legacy-acc" },
-    { id: "2", name: `${slug.toUpperCase()} Verified 2023`, price: 45000, stock: 42, category: slug, slug: "verified-2023" },
-    { id: "3", name: `${slug.toUpperCase()} High Trust Score`, price: 85000, stock: 12, category: slug, slug: "high-trust" },
-    { id: "4", name: `${slug.toUpperCase()} Bulk Package (x10)`, price: 120000, stock: 5, category: slug, slug: "bulk-10" },
-  ];
+  const [products, setProducts] = useState<any[]>([]);
+  const [category, setCategory] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // 1. Get category info
+        const { data: catData, error: catError } = await supabase
+          .from("categories")
+          .select("*")
+          .eq("slug", slug)
+          .single();
+
+        if (catError) throw catError;
+        setCategory(catData);
+
+        // 2. Get products in this category with real inventory count
+        const { data: prodData, error: prodError } = await supabase
+          .from("products")
+          .select(`
+            *,
+            categories(name),
+            inventory(count)
+          `)
+          .eq("category_id", catData.id)
+          .eq("is_active", true);
+
+        if (prodError) throw prodError;
+
+        // Custom formatting to match ProductCardProps
+        const formattedProducts = prodData.map(p => ({
+          id: p.id.toString(),
+          name: p.name,
+          price: parseFloat(p.price),
+          stock: p.inventory?.[0]?.count || 0,
+          category: p.categories?.name || "",
+          slug: p.slug
+        }));
+
+        setProducts(formattedProducts);
+      } catch (error) {
+        console.error("Error fetching category data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground font-medium">Đang tải danh sách sản phẩm...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -32,8 +85,8 @@ export default function CategoryPage({ params }: CategoryPageProps) {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h1 className="font-outfit font-bold text-4xl mb-2 capitalize">{slug} Accounts</h1>
-          <p className="text-muted-foreground">Khám phá danh sách tài khoản {slug} chất lượng cao nhất</p>
+          <h1 className="font-outfit font-bold text-4xl mb-2 capitalize">{category?.name || slug}</h1>
+          <p className="text-muted-foreground">{category?.description || `Khám phá danh sách tài khoản ${slug} chất lượng cao nhất`}</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -54,7 +107,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         ))}
       </div>
 
-      {/* Empty State (Optional) */}
+      {/* Empty State */}
       {products.length === 0 && (
         <div className="text-center py-20 bg-secondary/10 rounded-3xl border border-dashed border-border">
           <p className="text-muted-foreground">Hiện chưa có sản phẩm nào trong danh mục này.</p>

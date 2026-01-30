@@ -2,10 +2,26 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, User, Menu, Search } from "lucide-react";
+import { 
+  ShoppingCart, 
+  User, 
+  Menu, 
+  Search, 
+  LayoutDashboard, 
+  LogOut, 
+  History 
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/store/useCartStore";
 import { useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -13,9 +29,22 @@ import { useRouter } from "next/navigation";
 export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const totalItems = useCartStore((state) => state.getTotalItems());
   const supabase = createClient();
   const router = useRouter();
+
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    
+    if (!error) {
+      setProfile(data);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -24,12 +53,20 @@ export default function Header() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
     };
     checkUser();
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -80,15 +117,49 @@ export default function Header() {
 
           <div className="hidden sm:flex items-center gap-2 ml-2">
             {mounted && user ? (
-              <>
-                <Link href="/orders">
-                  <Button variant="ghost" className="gap-2">
-                    <User className="w-4 h-4" />
-                    <span className="max-w-[100px] truncate text-xs font-medium">{user.email?.split('@')[0]}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 px-2 hover:bg-primary/5">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div className="text-left hidden lg:block">
+                      <p className="text-xs font-bold truncate max-w-[100px]">
+                        {user.email?.split('@')[0]}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground capitalize">
+                        {profile?.role || 'Khách hàng'}
+                      </p>
+                    </div>
                   </Button>
-                </Link>
-                <Button variant="outline" size="sm" onClick={handleLogout}>Đăng xuất</Button>
-              </>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl shadow-xl border-border/50">
+                  <DropdownMenuLabel className="font-outfit font-bold">Tài khoản của tôi</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/orders">
+                    <DropdownMenuItem className="gap-2 cursor-pointer py-2.5">
+                      <History className="w-4 h-4 text-muted-foreground" />
+                      <span>Lịch sử đơn hàng</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  {(profile?.role === 'admin' || profile?.role === 'staff') && (
+                    <Link href="/admin">
+                      <DropdownMenuItem className="gap-2 cursor-pointer py-2.5 text-primary focus:text-primary">
+                        <LayoutDashboard className="w-4 h-4" />
+                        <span className="font-bold">Trang quản trị</span>
+                      </DropdownMenuItem>
+                    </Link>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="gap-2 cursor-pointer py-2.5 text-red-500 focus:text-red-500 focus:bg-red-500/5"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Đăng xuất</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <>
                 <Link href="/login">

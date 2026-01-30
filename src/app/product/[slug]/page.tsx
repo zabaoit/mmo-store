@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,12 @@ import {
   Plus, 
   ShoppingCart,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -27,35 +29,64 @@ interface ProductPageProps {
 export default function ProductPage({ params }: ProductPageProps) {
   const { slug } = use(params);
   const [quantity, setQuantity] = useState(1);
-
-  // Mock product data
-  const product = {
-    name: "Gmail Legacy Account - Verified 2020",
-    price: 25000,
-    stock: 157,
-    category: "Gmail",
-    description: "Tài khoản Gmail cổ reg từ năm 2020, đã trust cao, phù hợp để chạy quảng cáo, seeding hoặc làm tài khoản chính. Đã được check live 100%.",
-    warranty: "Bảo hành 1 đổi 1 trong vòng 24h nếu lỗi login hoặc sai pass.",
-    rules: [
-      "Không bảo hành nếu vi phạm chính sách Google.",
-      "Vui lòng đổi mật khẩu sau khi nhận hàng.",
-      "Check live trước khi sử dụng số lượng lớn."
-    ]
-  };
-
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select(`
+            *,
+            categories(name),
+            inventory(count)
+          `)
+          .eq("slug", slug)
+          .single();
+
+        if (error) throw error;
+        
+        // Format product data
+        const formattedProduct = {
+          ...data,
+          price: parseFloat(data.price),
+          category: data.categories?.name || "Tài khoản",
+          stock: data.inventory?.[0]?.count || 0,
+          rules: data.rules || [
+            "Không bảo hành nếu vi phạm chính sách của nền tảng.",
+            "Vui lòng đổi mật khẩu sau khi nhận hàng để đảm bảo an toàn.",
+            "Check live trước khi sử dụng số lượng lớn."
+          ]
+        };
+        
+        setProduct(formattedProduct);
+      } catch (error) {
+        console.error("Error fetching product:", error);
+        toast.error("Không tìm thấy sản phẩm");
+        router.push("/");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProduct();
+  }, [slug]);
 
   const handleQuantity = (val: number) => {
     const newQty = quantity + val;
-    if (newQty >= 1 && newQty <= product.stock) {
+    if (newQty >= 1 && newQty <= (product?.stock || 0)) {
       setQuantity(newQty);
     }
   };
 
   const handleAddToCart = () => {
+    if (!product) return;
     addItem({
-      id: "MOCK-ID-" + slug, // Using slug as part of ID for mock
+      id: product.id.toString(),
       name: product.name,
       price: product.price,
       quantity: quantity,
@@ -72,8 +103,9 @@ export default function ProductPage({ params }: ProductPageProps) {
   };
 
   const handleBuyNow = () => {
+    if (!product) return;
     addItem({
-      id: "MOCK-ID-" + slug,
+      id: product.id.toString(),
       name: product.name,
       price: product.price,
       quantity: quantity,
@@ -83,6 +115,17 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
     router.push("/checkout");
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground font-medium">Đang tải thông tin sản phẩm...</p>
+      </div>
+    );
+  }
+
+  if (!product) return null;
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -97,7 +140,9 @@ export default function ProductPage({ params }: ProductPageProps) {
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Badge className="bg-primary/10 text-primary border-none">{product.category}</Badge>
-              <Badge variant="outline" className="border-green-500/50 text-green-500 bg-green-500/5">Còn hàng</Badge>
+              <Badge variant="outline" className={`${product.stock > 0 ? 'border-green-500/50 text-green-500 bg-green-500/5' : 'border-red-500/50 text-red-500 bg-red-500/5'}`}>
+                {product.stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+              </Badge>
             </div>
             <h1 className="font-outfit font-bold text-4xl md:text-5xl mb-6">{product.name}</h1>
             
@@ -122,19 +167,19 @@ export default function ProductPage({ params }: ProductPageProps) {
             <div className="prose prose-invert max-w-none">
               <h3 className="text-lg font-bold mb-3">Mô tả sản phẩm</h3>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                {product.description}
+                {product.description || "Chưa có mô tả chi tiết cho sản phẩm này."}
               </p>
               
               <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 mb-8">
                 <h4 className="flex items-center gap-2 text-primary font-bold mb-3">
                   <ShieldCheck className="w-4 h-4" /> Chính sách bảo hành
                 </h4>
-                <p className="text-sm text-muted-foreground">{product.warranty}</p>
+                <p className="text-sm text-muted-foreground">{product.warranty_info || "Bảo hành 1 đổi 1 trong vòng 24h nếu lỗi login hoặc sai pass."}</p>
               </div>
 
               <h3 className="text-lg font-bold mb-3">Quy định sử dụng</h3>
               <ul className="space-y-2 list-none p-0">
-                {product.rules.map((rule, i) => (
+                {product.rules.map((rule: string, i: number) => (
                   <li key={i} className="flex gap-3 text-sm text-muted-foreground">
                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                     {rule}
@@ -168,6 +213,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                       size="icon" 
                       className="h-11 w-11 rounded-none hover:bg-secondary"
                       onClick={() => handleQuantity(-1)}
+                      disabled={product.stock === 0}
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
@@ -181,6 +227,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                       size="icon" 
                       className="h-11 w-11 rounded-none hover:bg-secondary"
                       onClick={() => handleQuantity(1)}
+                      disabled={product.stock === 0}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
@@ -202,6 +249,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 size="lg" 
                 className="h-14 font-bold text-lg shadow-xl shadow-primary/20"
                 onClick={handleBuyNow}
+                disabled={product.stock === 0}
               >
                 Mua ngay
               </Button>
@@ -210,6 +258,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 variant="secondary" 
                 className="h-14 font-bold text-lg"
                 onClick={handleAddToCart}
+                disabled={product.stock === 0}
               >
                 <ShoppingCart className="w-5 h-5 mr-2" /> Thêm vào giỏ
               </Button>

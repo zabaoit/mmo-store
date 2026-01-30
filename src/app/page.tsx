@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -8,17 +10,67 @@ import {
   Monitor,
   Mail,
   Facebook,
-  Smartphone
+  Smartphone,
+  Globe,
+  CircleEllipsis
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
+
+// Icon mapping from database string to Lucide component
+const IconMap: Record<string, any> = {
+  "Mail": Mail,
+  "Facebook": Facebook,
+  "Smartphone": Smartphone,
+  "Monitor": Monitor,
+  "Globe": Globe,
+  "CircleEllipsis": CircleEllipsis,
+};
+
+// Default styling mapping for categories
+const ColorMap: Record<string, { color: string, bg: string }> = {
+  "Gmail / Email": { color: "text-red-500", bg: "bg-red-500/10" },
+  "Facebook Accounts": { color: "text-blue-500", bg: "bg-blue-500/10" },
+  "TikTok / Social": { color: "text-pink-500", bg: "bg-pink-500/10" },
+  "Software / Tools": { color: "text-purple-500", bg: "bg-purple-500/10" },
+};
 
 export default function Home() {
-  const categories = [
-    { name: "Gmail / Email", icon: Mail, count: 1250, color: "text-red-500", bg: "bg-red-500/10" },
-    { name: "Facebook Accounts", icon: Facebook, count: 850, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { name: "TikTok / Social", icon: Smartphone, count: 420, color: "text-pink-500", bg: "bg-pink-500/10" },
-    { name: "Software / Tools", icon: Monitor, count: 15, color: "text-purple-500", bg: "bg-purple-500/10" },
-  ];
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch categories and their products count
+        const { data: catData, error: catError } = await supabase
+          .from("categories")
+          .select("*, products(id)");
+
+        if (catError) throw catError;
+
+        const formattedCategories = catData.map(cat => {
+          const styles = ColorMap[cat.name] || { color: "text-primary", bg: "bg-primary/10" };
+          return {
+            ...cat,
+            count: cat.products?.length || 0,
+            icon: IconMap[cat.icon_name] || CircleEllipsis,
+            ...styles
+          };
+        });
+
+        setCategories(formattedCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   return (
     <div className="flex flex-col gap-20 pb-20">
@@ -81,17 +133,24 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.map((cat, i) => (
-            <Link key={i} href={`/category/${cat.name.split(' ')[0].toLowerCase()}`}>
-              <div className="group p-6 rounded-2xl bg-secondary/30 border border-border/50 hover:border-primary/50 hover:bg-secondary/50 transition-all duration-300">
-                <div className={`w-12 h-12 ${cat.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <cat.icon className={`w-6 h-6 ${cat.color}`} />
+          {loading ? (
+            // Skeleton loader
+            [...Array(4)].map((_, i) => (
+              <div key={i} className="h-48 rounded-2xl bg-secondary/20 animate-pulse border border-border/50" />
+            ))
+          ) : (
+            categories.map((cat) => (
+              <Link key={cat.id} href={`/category/${cat.slug}`}>
+                <div className="group p-6 rounded-2xl bg-secondary/30 border border-border/50 hover:border-primary/50 hover:bg-secondary/50 transition-all duration-300">
+                  <div className={`w-12 h-12 ${cat.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <cat.icon className={`w-6 h-6 ${cat.color}`} />
+                  </div>
+                  <h3 className="font-bold text-lg mb-1">{cat.name}</h3>
+                  <p className="text-sm text-muted-foreground">{cat.count} sản phẩm có sẵn</p>
                 </div>
-                <h3 className="font-bold text-lg mb-1">{cat.name}</h3>
-                <p className="text-sm text-muted-foreground">{cat.count} sản phẩm có sẵn</p>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          )}
         </div>
       </section>
 
