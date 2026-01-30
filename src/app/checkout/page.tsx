@@ -214,13 +214,13 @@ export default function CheckoutPage() {
               <div className="p-6 rounded-2xl bg-secondary/30 border border-border/50 space-y-4">
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Ngân hàng</label>
-                  <p className="font-bold text-lg">VIETCOM BANK</p>
+                  <p className="font-bold text-lg">MB BANK</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Số tài khoản</label>
                   <div className="flex items-center justify-between">
-                    <p className="font-bold text-lg">9383198407</p>
-                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard('9383198407')}>
+                    <p className="font-bold text-lg">173005200</p>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard('173005200')}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
