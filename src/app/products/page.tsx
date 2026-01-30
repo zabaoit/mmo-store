@@ -5,14 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import ProductCard from "@/components/product/ProductCard";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search, Filter, SlidersHorizontal, Package } from "lucide-react";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -122,30 +116,32 @@ function ProductsContent() {
             />
           </div>
           
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[160px] h-11 rounded-xl bg-secondary/30 border-border/50">
-              <Filter className="w-4 h-4 mr-2 opacity-50" />
-              <SelectValue placeholder="Danh mục" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả danh mục</SelectItem>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50 z-10" />
+            <select 
+              value={selectedCategory} 
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="pl-9 pr-4 h-11 rounded-xl bg-secondary/30 border border-border/50 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 appearance-none min-w-[160px]"
+            >
+              <option value="all">Tất cả danh mục</option>
               {categories.map(cat => (
-                <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+                <option key={cat.id} value={cat.slug}>{cat.name}</option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+          </div>
 
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[160px] h-11 rounded-xl bg-secondary/30 border-border/50">
-              <SlidersHorizontal className="w-4 h-4 mr-2 opacity-50" />
-              <SelectValue placeholder="Sắp xếp" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Mới nhất</SelectItem>
-              <SelectItem value="price-low">Giá thấp đến cao</SelectItem>
-              <SelectItem value="price-high">Giá cao đến thấp</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50 z-10" />
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+              className="pl-9 pr-4 h-11 rounded-xl bg-secondary/30 border border-border/50 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 appearance-none min-w-[160px]"
+            >
+              <option value="newest">Mới nhất</option>
+              <option value="price-low">Giá thấp đến cao</option>
+              <option value="price-high">Giá cao đến thấp</option>
+            </select>
+          </div>
         </div>
       </div>
 
