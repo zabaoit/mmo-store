@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PaymentService } from "@/lib/payment-service";
+import { verifyPaymentAction } from "@/app/actions/payment";
 
 export default function CheckoutPage() {
   const { getTotalPrice, items, clearCart } = useCartStore();
@@ -97,8 +97,8 @@ export default function CheckoutPage() {
   const handleConfirmPayment = async () => {
     setLoading(true);
     try {
-      // 1. Verify payment via API
-      const verification = await PaymentService.verifyPayment(orderCode, totalPrice);
+      // 1. Verify payment via Server Action (avoids CORS)
+      const verification = await verifyPaymentAction(orderCode, totalPrice);
       
       if (!verification.success) {
         toast.error(verification.message);
