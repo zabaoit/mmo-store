@@ -28,6 +28,7 @@ export default function AdminLayout({
     { label: "Tổng quan", icon: LayoutDashboard, href: "/admin" },
     { label: "Đơn hàng", icon: ShoppingCart, href: "/admin/orders" },
     { label: "Sản phẩm", icon: Package, href: "/admin/products" },
+    { label: "Danh mục", icon: LayoutDashboard, href: "/admin/categories" },
     { label: "Kho hàng", icon: Package, href: "/admin/inventory" },
     { label: "Khách hàng", icon: Users, href: "/admin/users" },
     { label: "Cài đặt", icon: Settings, href: "/admin/settings" },

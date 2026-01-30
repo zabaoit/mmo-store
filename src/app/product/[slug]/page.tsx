@@ -42,20 +42,26 @@ export default function ProductPage({ params }: ProductPageProps) {
           .from("products")
           .select(`
             *,
-            categories(name),
-            inventory(count)
+            categories(name)
           `)
           .eq("slug", slug)
           .single();
 
         if (error) throw error;
+
+        // Fetch AVAILABLE stock count separately for accuracy
+        const { count: availableStock } = await supabase
+          .from("inventory")
+          .select("*", { count: 'exact', head: true })
+          .eq("product_id", data.id)
+          .eq("status", "AVAILABLE");
         
         // Format product data
         const formattedProduct = {
           ...data,
           price: parseFloat(data.price),
           category: data.categories?.name || "Tài khoản",
-          stock: data.inventory?.[0]?.count || 0,
+          stock: availableStock || 0,
           rules: data.rules || [
             "Không bảo hành nếu vi phạm chính sách của nền tảng.",
             "Vui lòng đổi mật khẩu sau khi nhận hàng để đảm bảo an toàn.",

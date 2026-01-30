@@ -94,6 +94,21 @@ export default function CheckoutPage() {
     setOrderCode(newOrderCode);
 
     try {
+      // 0. Final Real-time Stock Check
+      for (const item of items) {
+        const { count: currentStock } = await supabase
+          .from("inventory")
+          .select("*", { count: 'exact', head: true })
+          .eq("product_id", item.id)
+          .eq("status", "AVAILABLE");
+        
+        if (!currentStock || currentStock < item.quantity) {
+          toast.error(`Sản phẩm "${item.name}" hiện chỉ còn ${currentStock || 0} trong kho. Vui lòng điều chỉnh lại số lượng.`);
+          setLoading(false);
+          return;
+        }
+      }
+
       // 1. Create the main order
       const { data: order, error: orderError } = await supabase
         .from("orders")

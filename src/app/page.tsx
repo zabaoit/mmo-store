@@ -86,14 +86,14 @@ export default function Home() {
               Cung cấp nền tảng bán tài khoản mạng xã hội dạng số chất lượng cao. Giao hàng tự động, bảo mật tuyệt đối và hỗ trợ 24/7.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link href="#categories">
+              <Link href="/products">
                 <Button size="lg" className="h-14 px-8 text-lg font-bold shadow-xl shadow-primary/30">
                   Mua ngay <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link href="#categories">
+              <Link href="/categories">
                 <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-bold border-border/50 hover:bg-secondary/50">
-                  Tìm hiểu thêm
+                  Xem danh mục
                 </Button>
               </Link>
             </div>
@@ -127,9 +127,11 @@ export default function Home() {
             <h2 className="font-outfit font-bold text-3xl mb-2">Danh mục hàng hóa</h2>
             <p className="text-muted-foreground">Lựa chọn loại tài khoản phù hợp với nhu cầu của bạn</p>
           </div>
-          <Button variant="ghost" className="hidden sm:flex group">
-            Xem tất cả <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Button>
+          <Link href="/categories">
+            <Button variant="ghost" className="hidden sm:flex group">
+              Xem tất cả <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

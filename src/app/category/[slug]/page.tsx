@@ -32,27 +32,34 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         if (catError) throw catError;
         setCategory(catData);
 
-        // 2. Get products in this category with real inventory count
+        // 2. Get products in this category
         const { data: prodData, error: prodError } = await supabase
           .from("products")
           .select(`
             *,
-            categories(name),
-            inventory(count)
+            categories(name)
           `)
           .eq("category_id", catData.id)
           .eq("is_active", true);
 
         if (prodError) throw prodError;
 
-        // Custom formatting to match ProductCardProps
-        const formattedProducts = prodData.map(p => ({
-          id: p.id.toString(),
-          name: p.name,
-          price: parseFloat(p.price),
-          stock: p.inventory?.[0]?.count || 0,
-          category: p.categories?.name || "",
-          slug: p.slug
+        // Fetch AVAILABLE stock for each product in the category
+        const formattedProducts = await Promise.all((prodData || []).map(async (p) => {
+          const { count: availableStock } = await supabase
+            .from("inventory")
+            .select("*", { count: 'exact', head: true })
+            .eq("product_id", p.id)
+            .eq("status", "AVAILABLE");
+
+          return {
+            id: p.id.toString(),
+            name: p.name,
+            price: parseFloat(p.price),
+            stock: availableStock || 0,
+            category: p.categories?.name || "",
+            slug: p.slug
+          };
         }));
 
         setProducts(formattedProducts);

@@ -30,13 +30,26 @@ export const useCartStore = create<CartStore>()(
         const existingItem = items.find((i) => i.id === product.id);
 
         if (existingItem) {
+          const newQuantity = existingItem.quantity + product.quantity;
+          // Ensure we don't exceed stock when adding more of the same item
+          if (newQuantity > product.stock) {
+            set({
+              items: items.map((i) =>
+                i.id === product.id ? { ...i, quantity: product.stock } : i
+              ),
+            });
+            return;
+          }
+
           set({
             items: items.map((i) =>
-              i.id === product.id ? { ...i, quantity: i.quantity + product.quantity } : i
+              i.id === product.id ? { ...i, quantity: newQuantity } : i
             ),
           });
         } else {
-          set({ items: [...items, product] });
+          // Double check the initial quantity doesn't exceed stock
+          const initialQty = Math.min(product.quantity, product.stock);
+          set({ items: [...items, { ...product, quantity: initialQty }] });
         }
       },
       removeItem: (id) => {
