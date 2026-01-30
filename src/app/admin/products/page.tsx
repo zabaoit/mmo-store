@@ -48,8 +48,19 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [importData, setImportData] = useState({ productId: "", content: "" });
   const [newProduct, setNewProduct] = useState({ 
+    name: "", 
+    price: "", 
+    category_id: "", 
+    slug: "", 
+    description: "", 
+    warranty_info: "",
+    is_active: true 
+  });
+  const [editForm, setEditForm] = useState({ 
     name: "", 
     price: "", 
     category_id: "", 
@@ -133,6 +144,51 @@ export default function AdminProductsPage() {
     } catch (error: any) {
       toast.error("Lỗi khi thêm sản phẩm: " + error.message);
     }
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct || !editForm.name || !editForm.price || !editForm.category_id || !editForm.slug) {
+      toast.error("Vui lòng nhập đầy đủ thông tin cơ bản");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          name: editForm.name,
+          price: parseFloat(editForm.price),
+          category_id: editForm.category_id,
+          slug: editForm.slug,
+          description: editForm.description,
+          warranty_info: editForm.warranty_info,
+          is_active: editForm.is_active
+        })
+        .eq("id", editingProduct.id);
+
+      if (error) throw error;
+
+      toast.success("Đã cập nhật sản phẩm!");
+      setIsEditProductOpen(false);
+      setEditingProduct(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error("Lỗi khi cập nhật sản phẩm: " + error.message);
+    }
+  };
+
+  const openEditDialog = (product: any) => {
+    setEditingProduct(product);
+    setEditForm({
+      name: product.name,
+      price: product.price.toString(),
+      category_id: product.category_id?.toString() || "",
+      slug: product.slug,
+      description: product.description || "",
+      warranty_info: product.warranty_info || "",
+      is_active: product.is_active
+    });
+    setIsEditProductOpen(true);
   };
 
   const handleImportInventory = async () => {
@@ -387,7 +443,7 @@ export default function AdminProductsPage() {
                           <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem className="gap-2 cursor-pointer">
+                          <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => openEditDialog(p)}>
                             <Pencil className="w-4 h-4" /> Chỉnh sửa
                           </DropdownMenuItem>
                           <DropdownMenuItem 
@@ -406,6 +462,82 @@ export default function AdminProductsPage() {
           </Table>
         </div>
       </div>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa sản phẩm</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-bold">Tên sản phẩm</label>
+              <Input 
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold">Slug (URL)</label>
+              <Input 
+                value={editForm.slug}
+                onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold">Giá bán (VNĐ)</label>
+              <Input 
+                type="number" 
+                value={editForm.price}
+                onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold">Danh mục</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={editForm.category_id}
+                onChange={(e) => setEditForm({ ...editForm, category_id: e.target.value })}
+              >
+                <option value="">Chọn danh mục...</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2 col-span-2">
+              <label className="text-sm font-bold">Mô tả sản phẩm</label>
+              <Textarea 
+                placeholder="Thông tin chi tiết về sản phẩm..." 
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2 col-span-2">
+              <label className="text-sm font-bold">Thông tin bảo hành</label>
+              <Input 
+                placeholder="Bảo hành 1 đổi 1 trong 24h..." 
+                value={editForm.warranty_info}
+                onChange={(e) => setEditForm({ ...editForm, warranty_info: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <input 
+                type="checkbox" 
+                id="is_active_edit"
+                checked={editForm.is_active}
+                onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <label htmlFor="is_active_edit" className="text-sm font-bold cursor-pointer">Sản phẩm đang bán</label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsEditProductOpen(false)}>Hủy</Button>
+            <Button onClick={handleUpdateProduct}>Lưu thay đổi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
