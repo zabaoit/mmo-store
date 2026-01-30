@@ -1,138 +1,75 @@
-"use client";
-
-import { use, useEffect, useState } from "react";
-import ProductCard from "@/components/product/ProductCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Filter, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
+import { ArrowLeft } from "lucide-react";
+import { createServerSideClient } from "@/lib/supabase-server";
+import CategorySearch from "./CategorySearch";
+import { notFound } from "next/navigation";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export default function CategoryPage({ params }: CategoryPageProps) {
-  const { slug } = use(params);
-  const [products, setProducts] = useState<any[]>([]);
-  const [category, setCategory] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const supabase = createClient();
+export default async function CategoryPage({ params }: CategoryPageProps) {
+  const { slug } = await params;
+  const supabase = await createServerSideClient();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        // 1. Get category info
-        const { data: catData, error: catError } = await supabase
-          .from("categories")
-          .select("*")
-          .eq("slug", slug)
-          .single();
+  // 1. Get category info
+  const { data: catData, error: catError } = await supabase
+    .from("categories")
+    .select("id, name, slug, description")
+    .eq("slug", slug)
+    .single();
 
-        if (catError) throw catError;
-        setCategory(catData);
-
-        // 2. Get products in this category
-        const { data: prodData, error: prodError } = await supabase
-          .from("products")
-          .select("*")
-          .eq("category_id", catData.id)
-          .eq("is_active", true);
-
-        if (prodError) throw prodError;
-
-        // Fetch AVAILABLE stock for each product in the category
-        const formattedProducts = await Promise.all((prodData || []).map(async (p) => {
-          const { count: availableStock, error: stockError } = await supabase
-            .from("inventory")
-            .select("*", { count: 'exact', head: true })
-            .eq("product_id", p.id)
-            .eq("status", "AVAILABLE");
-
-          if (stockError) console.warn(`Error fetching stock for product ${p.id}:`, stockError);
-
-          return {
-            id: p.id.toString(),
-            name: p.name,
-            price: parseFloat(p.price),
-            stock: availableStock || 0,
-            category: catData.name, // Use name from category fetch
-            slug: p.slug
-          };
-        }));
-
-        setProducts(formattedProducts);
-      } catch (error: any) {
-        console.error("Error fetching category data:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          fullError: error
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
-        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-        <p className="text-muted-foreground font-medium">Đang tải danh sách sản phẩm...</p>
-      </div>
-    );
+  if (catError || !catData) {
+    console.error("DEBUG - Category fetch error on server:", catError);
+    return notFound();
   }
+
+  // 2. Get products in this category
+  const { data: prodData, error: prodError } = await supabase
+    .from("products")
+    .select("*")
+    .eq("category_id", catData.id)
+    .eq("is_active", true);
+
+  if (prodError) {
+    console.error("DEBUG - Products fetch error on server:", prodError);
+    // Continue with empty products if needed, or throw
+  }
+
+  // 3. Fetch AVAILABLE stock for each product
+  const formattedProducts = await Promise.all((prodData || []).map(async (p) => {
+    const { count: availableStock } = await supabase
+      .from("inventory")
+      .select("*", { count: 'exact', head: true })
+      .eq("product_id", p.id)
+      .eq("status", "AVAILABLE");
+
+    return {
+      id: p.id.toString(),
+      name: p.name,
+      price: parseFloat(p.price),
+      stock: availableStock || 0,
+      category: catData.name,
+      slug: p.slug
+    };
+  }));
 
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Breadcrumbs / Back */}
-      <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors group">
+      <Link href="/categories" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-sm font-medium">Quay lại trang chủ</span>
+        <span className="text-sm font-medium">Quay lại danh sách</span>
       </Link>
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h1 className="font-outfit font-bold text-4xl mb-2 capitalize">{category?.name || slug}</h1>
-          <p className="text-muted-foreground">{category?.description || `Khám phá danh sách tài khoản ${slug} chất lượng cao nhất`}</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="relative max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Tìm trong danh mục..." 
-              className="pl-10 h-11 bg-secondary/30" 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
-            <Filter className="w-4 h-4" />
-          </Button>
+          <h1 className="font-outfit font-bold text-4xl mb-2 capitalize">{catData.name}</h1>
+          <p className="text-muted-foreground">{catData.description || `Khám phá danh sách tài khoản ${catData.name} chất lượng cao nhất`}</p>
         </div>
       </div>
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products
-          .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-          .map((product) => (
-            <ProductCard key={product.id} {...product} />
-          ))}
-      </div>
-
-      {/* Empty State */}
-      {products.length === 0 && (
-        <div className="text-center py-20 bg-secondary/10 rounded-3xl border border-dashed border-border">
-          <p className="text-muted-foreground">Hiện chưa có sản phẩm nào trong danh mục này.</p>
-        </div>
-      )}
+      <CategorySearch initialProducts={formattedProducts} />
     </div>
   );
 }
