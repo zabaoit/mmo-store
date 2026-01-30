@@ -47,6 +47,11 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderDetails, setOrderDetails] = useState<any[]>([]);
+  const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const supabase = createClient();
 
   const fetchOrders = async () => {
@@ -104,6 +109,42 @@ export default function AdminOrdersPage() {
       success: 'Đã duyệt đơn hàng thành công!',
       error: (err) => `Lỗi khi duyệt đơn: ${err.message}`,
     });
+  };
+
+  const fetchOrderDetails = async (order: any) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
+    setDetailsLoading(true);
+    try {
+      // 1. Fetch Order Items
+      const { data: items, error: itemsError } = await supabase
+        .from("order_items")
+        .select(`
+          *,
+          products(name)
+        `)
+        .eq("order_id", order.id);
+      
+      if (itemsError) throw itemsError;
+      setOrderDetails(items || []);
+
+      // 2. Fetch Delivered Content if COMPLETED
+      if (order.status === "COMPLETED") {
+        const { data: inventory, error: invError } = await supabase
+          .from("inventory")
+          .select("content, product_id")
+          .eq("order_id", order.id);
+        
+        if (invError) throw invError;
+        setOrderDeliveries(inventory || []);
+      } else {
+        setOrderDeliveries([]);
+      }
+    } catch (error: any) {
+      toast.error("Lỗi khi tải chi tiết đơn: " + error.message);
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   const submitReject = async () => {
@@ -230,7 +271,10 @@ export default function AdminOrdersPage() {
                         <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
+                        <DropdownMenuItem 
+                          className="gap-2 cursor-pointer"
+                          onClick={() => fetchOrderDetails(o)}
+                        >
                           <ExternalLink className="w-4 h-4" /> Chi tiết đơn hàng
                         </DropdownMenuItem>
                         {o.status === 'WAITING_APPROVAL' && (
@@ -285,6 +329,91 @@ export default function AdminOrdersPage() {
             <Button variant="destructive" onClick={submitReject} disabled={loading || !rejectReason}>
               {loading ? "Đang xử lý..." : "Xác nhận từ chối"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đơn hàng - {selectedOrder?.order_code}</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết về sản phẩm và tài khoản đã bàn giao.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {detailsLoading ? (
+            <div className="py-10 flex flex-col items-center justify-center">
+              <Clock className="w-10 h-10 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground">Đang tải chi tiết...</p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-secondary/30">
+                  <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Khách hàng</p>
+                  <p className="font-bold text-sm sm:text-base truncate">{selectedOrder?.profiles?.email}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-secondary/30">
+                  <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Trạng thái</p>
+                  <div>{selectedOrder && getStatusBadge(selectedOrder.status)}</div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-secondary/20">
+                    <TableRow>
+                      <TableHead>Sản phẩm</TableHead>
+                      <TableHead>Đơn giá</TableHead>
+                      <TableHead>Số lượng</TableHead>
+                      <TableHead className="text-right">Thành tiền</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orderDetails.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-bold">{(item as any).products?.name}</TableCell>
+                        <TableCell className="whitespace-nowrap">{parseFloat(item.unit_price).toLocaleString('vi-VN')}đ</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell className="text-right font-bold whitespace-nowrap">{parseFloat(item.subtotal).toLocaleString('vi-VN')}đ</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {orderDeliveries.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-bold text-sm uppercase flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" /> Nội dung đã bàn giao
+                  </h3>
+                  <div className="p-4 rounded-xl bg-secondary/50 font-mono text-xs whitespace-pre-wrap break-all max-h-[200px] overflow-y-auto border border-border/50">
+                    {orderDeliveries.map((inv, idx) => (
+                      <div key={idx} className="mb-2 last:mb-0 border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                        {inv.content}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="secondary" onClick={() => setIsDetailsOpen(false)} className="flex-1 sm:flex-none">Đóng</Button>
+            {selectedOrder?.status === 'WAITING_APPROVAL' && (
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
+                onClick={() => {
+                  setIsDetailsOpen(false);
+                  handleApprove(selectedOrder.id);
+                }}
+              >
+                Duyệt đơn hàng ngay
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
