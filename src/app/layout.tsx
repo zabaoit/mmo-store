@@ -3,6 +3,7 @@ import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import ChatWidget from "@/components/chat/ChatWidget";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function RootLayout({
         <main className="flex-1">
           {children}
         </main>
+        <ChatWidget />
         <Footer />
       </body>
     </html>

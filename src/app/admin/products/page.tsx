@@ -83,6 +83,7 @@ export default function AdminProductsPage() {
           categories(name),
           inventory(count)
         `)
+        .eq("inventory.status", "AVAILABLE")
         .order("created_at", { ascending: false });
 
       if (prodError) throw prodError;

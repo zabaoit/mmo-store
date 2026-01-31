@@ -24,10 +24,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { createClient } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function Header() {
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const isAdminPage = pathname?.startsWith("/admin");
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const totalItems = useCartStore((state) => state.getTotalItems());
@@ -60,12 +62,15 @@ export default function Header() {
     checkUser();
 
     // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
+        if (event === 'SIGNED_OUT') {
+          useCartStore.getState().clearCart();
+        }
       }
     });
 
@@ -74,9 +79,12 @@ export default function Header() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    useCartStore.getState().clearCart(); // Clear cart on logout
     router.push("/");
     router.refresh();
   };
+
+  if (isAdminPage) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full glass border-b">

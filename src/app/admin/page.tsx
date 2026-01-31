@@ -51,11 +51,23 @@ export default function AdminDashboard() {
           .select("*", { count: 'exact', head: true });
 
         // Get low stock products (stock < 5)
-        const { data: inventoryData } = await supabase
-          .from("inventory")
-          .select("product_id, count");
+        const { data: productsData } = await supabase
+          .from("products")
+          .select("id")
+          .eq("is_active", true);
         
-        const lowStockCount = inventoryData?.filter(item => item.count < 5).length || 0;
+        const { data: availableInventory } = await supabase
+          .from("inventory")
+          .select("product_id")
+          .eq("status", "AVAILABLE");
+
+        let lowStockCount = 0;
+        if (productsData && availableInventory) {
+          productsData.forEach(p => {
+            const stock = availableInventory.filter(i => i.product_id === p.id).length;
+            if (stock < 5) lowStockCount++;
+          });
+        }
 
         setStats([
           { label: "Tổng doanh thu", value: `${totalRevenue.toLocaleString('vi-VN')}đ`, icon: TrendingUp, trend: "Lũy kế", color: "text-green-500" },
@@ -76,16 +88,32 @@ export default function AdminDashboard() {
 
         setRecentOrders(orders || []);
 
-        // 3. Mock Chart Data (Real chart data requires more complex aggregation, using mock for visual)
-        setChartData([
-          { name: "Mon", revenue: 4000 },
-          { name: "Tue", revenue: 3000 },
-          { name: "Wed", revenue: 5000 },
-          { name: "Thu", revenue: 4500 },
-          { name: "Fri", revenue: 6000 },
-          { name: "Sat", revenue: 8000 },
-          { name: "Sun", revenue: 7000 },
-        ]);
+        // 3. Real Chart Data Aggregation (Past 7 days)
+        const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const { data: chartOrders } = await supabase
+          .from("orders")
+          .select("total_amount, created_at")
+          .eq("status", "COMPLETED")
+          .gte("created_at", sevenDaysAgo.toISOString());
+
+        const aggregatedData = [];
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - (6 - i));
+          const dayLabel = dayLabels[(date.getDay() + 6) % 7];
+          
+          const dailyRevenue = chartOrders?.filter(o => {
+            const orderDate = new Date(o.created_at);
+            return orderDate.toDateString() === date.toDateString();
+          }).reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
+
+          aggregatedData.push({ name: dayLabel, revenue: dailyRevenue });
+        }
+        setChartData(aggregatedData);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -197,9 +225,14 @@ export default function AdminDashboard() {
                     <p className="text-sm font-bold">{Number(order.total_amount).toLocaleString('vi-VN')}đ</p>
                     <span className={`text-[10px] font-bold uppercase ${
                       order.status === 'COMPLETED' ? 'text-green-500' :
-                      order.status === 'WAITING_APPROVAL' ? 'text-blue-500' : 'text-yellow-500'
+                      order.status === 'WAITING_APPROVAL' ? 'text-blue-500' : 
+                      order.status === 'REJECTED' ? 'text-red-500' : 
+                      order.status === 'CANCELLED' ? 'text-gray-500' : 'text-yellow-500'
                     }`}>
-                      {order.status === 'WAITING_APPROVAL' ? 'Chờ duyệt' : order.status}
+                      {order.status === 'COMPLETED' ? 'Hoàn tất' : 
+                       order.status === 'WAITING_APPROVAL' ? 'Chờ duyệt' :
+                       order.status === 'REJECTED' ? 'Từ chối' :
+                       order.status === 'CANCELLED' ? 'Đã hủy' : 'Chờ TT'}
                     </span>
                   </div>
                 </div>

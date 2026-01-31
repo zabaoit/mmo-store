@@ -44,18 +44,34 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch categories and their products count
+        // Fetch categories and their total AVAILABLE stock
         const { data: catData, error: catError } = await supabase
           .from("categories")
-          .select("*, products(id)");
+          .select(`
+            *,
+            products(
+              id,
+              is_active,
+              inventory(count)
+            )
+          `)
+          .eq("products.is_active", true)
+          .eq("products.inventory.status", "AVAILABLE");
 
         if (catError) throw catError;
 
         const formattedCategories = catData.map(cat => {
           const styles = ColorMap[cat.name] || { color: "text-primary", bg: "bg-primary/10" };
+          
+          // Calculate total available stock across all products in this category
+          const totalStock = cat.products?.reduce((sum: number, p: any) => {
+            const count = p.inventory?.[0]?.count || 0;
+            return sum + count;
+          }, 0) || 0;
+
           return {
             ...cat,
-            count: cat.products?.length || 0,
+            count: totalStock,
             icon: IconMap[cat.icon_name] || CircleEllipsis,
             ...styles
           };

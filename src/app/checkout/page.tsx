@@ -69,7 +69,7 @@ export default function CheckoutPage() {
         .update({ status: "CANCELLED", admin_note: "Tự động hủy do hết thời gian thanh toán" })
         .eq("id", orderId);
       
-      toast.error("Đơn hàng đã bị hủy do hết thời gian thanh toán (5 phút).");
+      toast.error("Đơn hàng đã bị hủy do hết thời gian thanh toán");
       setStep(1);
       setOrderId(null);
       setTimeLeft(300);
